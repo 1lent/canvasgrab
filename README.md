@@ -5,7 +5,7 @@ Download Spotify Canvas videos (the looping clips behind songs) as MP4 or GIF.
 ## Install
 
 ```bash
-git clone https://github.com/username/canvasgrab.git
+git clone https://github.com/1lent/canvasgrab.git
 cd canvasgrab
 pip3 install -r requirements.txt
 brew install ffmpeg                   # for GIF conversion (optional)

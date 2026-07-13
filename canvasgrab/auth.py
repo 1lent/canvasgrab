@@ -115,7 +115,15 @@ def _generate_totp(secret_bytes: bytes, counter: Optional[int] = None) -> str:
     return f"{code % 1000000:06d}"
 
 
-def get_canvas_url(track_id: str, token: str) -> Optional[str]:
+class CanvasError(Exception):
+    pass
+
+
+class NoCanvasError(CanvasError):
+    pass
+
+
+def get_canvas_url(track_id: str, token: str) -> str:
     uri = f"spotify:track:{track_id}"
     body = encode_canvas_request(uri)
     resp = requests.post(
@@ -124,7 +132,10 @@ def get_canvas_url(track_id: str, token: str) -> Optional[str]:
         data=body,
     )
     resp.raise_for_status()
-    return decode_canvas_url(resp.content)
+    url = decode_canvas_url(resp.content)
+    if not url:
+        raise NoCanvasError("No canvas available for this track")
+    return url
 
 
 def auto_get_sp_dc() -> Optional[str]:

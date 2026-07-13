@@ -22,6 +22,8 @@ import re
 from typing import Optional
 
 from canvasgrab.auth import (
+    CanvasError,
+    NoCanvasError,
     auto_get_sp_dc,
     get_cached_canvas_url,
     get_canvas_url,
@@ -116,9 +118,15 @@ def main() -> None:
             print("  Looking up Canvas ...")
             try:
                 canvas_url = get_canvas_url(track_id, token)
+            except NoCanvasError:
+                canvas_url = None
+            except CanvasError as e:
+                if from_manual:
+                    die(str(e))
+                canvas_url = None
             except Exception as e:
                 err = str(e)
-                if from_manual and "401" in err:
+                if from_manual and ("401" in err or "403" in err):
                     die(
                         "Canvas API rejected the token.\n"
                         "Your --sp-dc cookie is likely invalid or expired.\n"
@@ -150,16 +158,11 @@ def main() -> None:
             )
         elif from_manual:
             die(
-                "No canvas found. Either:\n"
-                "  - This track has no looping video, or\n"
-                "  - The --sp-dc cookie is invalid/expired.\n\n"
-                "Check that your cookie is correct by visiting open.spotify.com\n"
-                "and re-copying it from DevTools → Application → Cookies."
+                "No canvas found for this track.\n"
+                "Your cookie is valid — this track just has no looping video."
             )
         else:
-            die(
-                "No canvas available for this track."
-            )
+            die("No canvas available for this track.")
 
     safe_name = f"{artist} - {title}".replace("/", ":")
     mp4_path = OUTPUT_DIR / f"{safe_name}.mp4"

@@ -147,19 +147,36 @@ def auto_get_sp_dc() -> Optional[str]:
             pass
         return None
 
+    is_macos = platform.system() == "Darwin"
     BASE = str(Path.home())
-    candidates: list[Tuple[str, list[str]]] = [
-        ("Chrome", [f"{BASE}/Library/Application Support/Google/Chrome"]),
-        ("Brave", [f"{BASE}/Library/Application Support/BraveSoftware/Brave-Browser"]),
-        ("Edge", [f"{BASE}/Library/Application Support/Microsoft Edge"]),
-        ("Chromium", [f"{BASE}/Library/Application Support/Chromium"]),
-        ("Vivaldi", [f"{BASE}/Library/Application Support/Vivaldi"]),
-        ("Opera", [f"{BASE}/Library/Application Support/com.operasoftware.Opera"]),
-        ("Discord", [f"{BASE}/Library/Application Support/discord"]),
-        ("Cursor", [f"{BASE}/Library/Application Support/Cursor"]),
-    ]
-    for _name, dirs in candidates:
+    appdata = os.environ.get("APPDATA", "")
+    localappdata = os.environ.get("LOCALAPPDATA", "")
+
+    if is_macos:
+        browser_dirs: list[Tuple[str, list[str]]] = [
+            ("Chrome", [f"{BASE}/Library/Application Support/Google/Chrome"]),
+            ("Brave", [f"{BASE}/Library/Application Support/BraveSoftware/Brave-Browser"]),
+            ("Edge", [f"{BASE}/Library/Application Support/Microsoft Edge"]),
+            ("Chromium", [f"{BASE}/Library/Application Support/Chromium"]),
+            ("Vivaldi", [f"{BASE}/Library/Application Support/Vivaldi"]),
+            ("Opera", [f"{BASE}/Library/Application Support/com.operasoftware.Opera"]),
+            ("Discord", [f"{BASE}/Library/Application Support/discord"]),
+            ("Cursor", [f"{BASE}/Library/Application Support/Cursor"]),
+        ]
+    else:
+        browser_dirs = [
+            ("Chrome", [f"{localappdata}/Google/Chrome/User Data"]),
+            ("Brave", [f"{localappdata}/BraveSoftware/Brave-Browser/User Data"]),
+            ("Edge", [f"{localappdata}/Microsoft/Edge/User Data"]),
+            ("Chromium", [f"{localappdata}/Chromium/User Data"]),
+            ("Opera", [f"{appdata}/Opera Software/Opera Stable"]),
+            ("Vivaldi", [f"{localappdata}/Vivaldi/User Data"]),
+        ]
+
+    for _name, dirs in browser_dirs:
         for d in dirs:
+            if not d or not os.path.isdir(d):
+                continue
             for profile in ["Default", "Profile 1", "Profile 2", ""]:
                 path = os.path.join(d.strip(), profile.strip(), "Cookies")
                 if path.count("//"):
@@ -170,24 +187,25 @@ def auto_get_sp_dc() -> Optional[str]:
                         _cache_sp_dc(cookie)
                         return cookie
 
-    ff_profiles = f"{BASE}/Library/Application Support/Firefox/Profiles"
-    if os.path.isdir(ff_profiles):
-        for name in os.listdir(ff_profiles):
-            path = os.path.join(ff_profiles, name, "cookies.sqlite")
-            if os.path.isfile(path):
-                cookie = _try_spotify(path)
-                if cookie:
-                    _cache_sp_dc(cookie)
-                    return cookie
+    if is_macos:
+        ff_profiles = f"{BASE}/Library/Application Support/Firefox/Profiles"
+        if os.path.isdir(ff_profiles):
+            for name in os.listdir(ff_profiles):
+                path = os.path.join(ff_profiles, name, "cookies.sqlite")
+                if os.path.isfile(path):
+                    cookie = _try_spotify(path)
+                    if cookie:
+                        _cache_sp_dc(cookie)
+                        return cookie
 
-    for saf_path in [
-        f"{BASE}/Library/Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies",
-        f"{BASE}/Library/Cookies/Cookies.binarycookies",
-    ]:
-        cookie = _parse_safari_binarycookies(saf_path)
-        if cookie:
-            _cache_sp_dc(cookie)
-            return cookie
+        for saf_path in [
+            f"{BASE}/Library/Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies",
+            f"{BASE}/Library/Cookies/Cookies.binarycookies",
+        ]:
+            cookie = _parse_safari_binarycookies(saf_path)
+            if cookie:
+                _cache_sp_dc(cookie)
+                return cookie
 
     if SP_DC_CACHE.exists():
         try:
@@ -259,6 +277,8 @@ def _read_cstring(data: bytes, offset: int) -> str:
 
 
 def _decrypt_chromium_cookie(encrypted_value: bytes) -> Optional[str]:
+    if platform.system() != "Darwin":
+        return None
     if not encrypted_value or len(encrypted_value) < 18:
         return None
     ver = encrypted_value[:3]
@@ -300,23 +320,35 @@ def _decrypt_chromium_cookie(encrypted_value: bytes) -> Optional[str]:
 
 def get_cached_canvas_url(track_uri: str) -> Optional[str]:
     needles = [track_uri.encode(), base64.b64encode(track_uri.encode())]
-    spotify_dir = os.path.expanduser("~/Library/Application Support/Spotify/PersistentCache")
-    for pattern in ["Users/*/primary.ldb/*.ldb", "Users/*/*.ldb/*.ldb", "public.ldb/*.ldb"]:
-        for ldb_file in glob.glob(os.path.join(spotify_dir, pattern)):
-            if not os.path.isfile(ldb_file):
-                continue
-            try:
-                with open(ldb_file, "rb") as f:
-                    data = f.read()
-                for needle in needles:
-                    idx = data.find(needle)
-                    if idx < 0:
-                        continue
-                    m = CANVAS_URL_RE.search(data, idx, idx + 600)
-                    if m:
-                        return m.group().decode()
-            except Exception:
-                pass
+    is_macos = platform.system() == "Darwin"
+    if is_macos:
+        search_roots = [
+            os.path.expanduser("~/Library/Application Support/Spotify/PersistentCache"),
+        ]
+    else:
+        search_roots = [
+            os.path.join(os.environ.get("APPDATA", ""), "Spotify", "PersistentCache"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Spotify", "PersistentCache"),
+        ]
+    for spotify_dir in search_roots:
+        if not spotify_dir or not os.path.isdir(spotify_dir):
+            continue
+        for pattern in ["Users/*/primary.ldb/*.ldb", "Users/*/*.ldb/*.ldb", "public.ldb/*.ldb"]:
+            for ldb_file in glob.glob(os.path.join(spotify_dir, pattern)):
+                if not os.path.isfile(ldb_file):
+                    continue
+                try:
+                    with open(ldb_file, "rb") as f:
+                        data = f.read()
+                    for needle in needles:
+                        idx = data.find(needle)
+                        if idx < 0:
+                            continue
+                        m = CANVAS_URL_RE.search(data, idx, idx + 600)
+                        if m:
+                            return m.group().decode()
+                except Exception:
+                    pass
     return None
 
 

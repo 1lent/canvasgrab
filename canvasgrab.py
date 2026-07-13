@@ -86,7 +86,18 @@ def main() -> None:
     track_uri = f"spotify:track:{track_id}"
     print(f"\n  {artist} — {title}")
 
-    sp_dc = args.sp_dc or os.environ.get("SP_DC") or auto_get_sp_dc()
+    sp_dc: Optional[str] = None
+    from_manual = False
+
+    if args.sp_dc:
+        sp_dc = args.sp_dc
+        from_manual = True
+        print("  Using manual cookie")
+    elif os.environ.get("SP_DC"):
+        sp_dc = os.environ["SP_DC"]
+    else:
+        sp_dc = auto_get_sp_dc()
+
     canvas_url: Optional[str] = None
 
     if sp_dc:
@@ -96,23 +107,50 @@ def main() -> None:
             print("  Looking up Canvas ...")
             try:
                 canvas_url = get_canvas_url(track_id, token)
-            except Exception:
+            except Exception as e:
+                err = str(e)
+                if from_manual and "401" in err:
+                    die(
+                        "Canvas API rejected the token.\n"
+                        "Your --sp-dc cookie is likely invalid or expired.\n"
+                        "Re-copy it from open.spotify.com → DevTools → Cookies."
+                    )
+                print(f"  Canvas API error: {err}", file=sys.stderr)
                 canvas_url = None
+        else:
+            if from_manual:
+                die(
+                    "Authentication failed with provided --sp-dc cookie.\n"
+                    "The cookie may be expired or invalid."
+                )
+            print("  Auth failed, trying cache ...")
 
     if not canvas_url:
         print("  Searching local cache ...")
         canvas_url = get_cached_canvas_url(track_uri)
 
     if not canvas_url:
-        die(
-            "Cannot authenticate and no cached canvas found.\n\n"
-            "To fix:\n"
-            "  1. Go to https://open.spotify.com and log in\n"
-            "  2. Open DevTools → Application → Cookies → open.spotify.com\n"
-            "  3. Copy the 'sp_dc' cookie value\n"
-            "  4. Run: export SP_DC=\"<cookie>\"\n"
-            "  5. Try again"
-        )
+        if not sp_dc:
+            die(
+                "No sp_dc cookie found and no cached canvas available.\n\n"
+                "To fix:\n"
+                "  1. Go to https://open.spotify.com and log in\n"
+                "  2. Open DevTools → Application → Cookies → open.spotify.com\n"
+                "  3. Copy the 'sp_dc' cookie value\n"
+                "  4. Run: canvasgrab --sp-dc \"<cookie>\""
+            )
+        elif from_manual:
+            die(
+                "No canvas found. Either:\n"
+                "  - This track has no looping video, or\n"
+                "  - The --sp-dc cookie is invalid/expired.\n\n"
+                "Check that your cookie is correct by visiting open.spotify.com\n"
+                "and re-copying it from DevTools → Application → Cookies."
+            )
+        else:
+            die(
+                "No canvas available for this track."
+            )
 
     safe_name = f"{artist} - {title}".replace("/", ":")
     mp4_path = OUTPUT_DIR / f"{safe_name}.mp4"

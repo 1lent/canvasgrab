@@ -123,7 +123,7 @@ class NoCanvasError(CanvasError):
     pass
 
 
-def get_canvas_url(track_id: str, token: str) -> str:
+def get_canvas_url(track_id: str, token: str, verbose: bool = False) -> str:
     uri = f"spotify:track:{track_id}"
     body = encode_canvas_request(uri)
     resp = requests.post(
@@ -132,6 +132,9 @@ def get_canvas_url(track_id: str, token: str) -> str:
         data=body,
     )
     resp.raise_for_status()
+    if verbose:
+        import sys
+        print(f"  [verbose] Canvas status: {resp.status_code}, content length: {len(resp.content)}", file=sys.stderr)
     url = decode_canvas_url(resp.content)
     if not url:
         raise NoCanvasError("No canvas available for this track")

@@ -82,6 +82,7 @@ def main() -> None:
     parser.add_argument("--open", action="store_true", help="Open the file after download")
     parser.add_argument("--sp-dc", metavar="COOKIE", help="Spotify sp_dc cookie (or set SP_DC env var)")
     parser.add_argument("--install", action="store_true", help="Install canvasgrab to /usr/local/bin")
+    parser.add_argument("--verbose", action="store_true", help="Show API responses for debugging")
     args = parser.parse_args()
 
     if args.install:
@@ -117,7 +118,7 @@ def main() -> None:
         if token:
             print("  Looking up Canvas ...")
             try:
-                canvas_url = get_canvas_url(track_id, token)
+                canvas_url = get_canvas_url(track_id, token, verbose=args.verbose)
             except NoCanvasError:
                 canvas_url = None
             except CanvasError as e:

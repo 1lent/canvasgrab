@@ -73,7 +73,8 @@ class _ProtoReader:
         if wire_type == _WIRE_VARINT:
             self.read_varint()
         elif wire_type == _WIRE_LEN:
-            self._pos += self.read_varint()
+            length = self.read_varint()
+            self._pos += length
         elif wire_type in (1, 5):
             self._pos += 8 if wire_type == 1 else 4
 

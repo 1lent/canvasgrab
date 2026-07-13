@@ -123,7 +123,7 @@ class NoCanvasError(CanvasError):
     pass
 
 
-def get_canvas_url(track_id: str, token: str, verbose: bool = False) -> str:
+def get_canvas_url(track_id: str, token: str, verbose: bool = False) -> Tuple[str, Optional[str]]:
     uri = f"spotify:track:{track_id}"
     body = encode_canvas_request(uri)
     resp = requests.post(
@@ -135,10 +135,22 @@ def get_canvas_url(track_id: str, token: str, verbose: bool = False) -> str:
     if verbose:
         import sys
         print(f"  [verbose] Canvas status: {resp.status_code}, content length: {len(resp.content)}", file=sys.stderr)
-    url = decode_canvas_url(resp.content)
+    url, artist = decode_canvas_url(resp.content)
     if not url:
         raise NoCanvasError("No canvas available for this track")
-    return url
+    return url, artist
+
+
+def get_track_info(track_id: str, token: str) -> Tuple[str, str]:
+    resp = requests.get(
+        f"https://api.spotify.com/v1/tracks/{track_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    artist = data["artists"][0]["name"] if data.get("artists") else "Unknown"
+    title = data.get("name", "Unknown")
+    return artist, title
 
 
 def auto_get_sp_dc() -> Optional[str]:

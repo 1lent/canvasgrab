@@ -8,7 +8,7 @@ from typing import Optional
 import requests
 
 
-OUTPUT_DIR = Path.home() / "Downloads" / "Canvas"
+OUTPUT_DIR = Path.home() / "canvasgrab"
 
 
 def die(msg: str, code: int = 1) -> None:

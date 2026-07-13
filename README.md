@@ -23,8 +23,6 @@ pip install -r requirements.txt
 winget install ffmpeg                     # optional, for GIFs
 ```
 
-No `--install` on Windows — run `python canvasgrab.py` directly from the project folder, or add it to your PATH manually.
-
 ## Usage
 
 ```bash
@@ -34,29 +32,28 @@ canvasgrab "spotify:track:3OHfY..."         # any track by URI
 canvasgrab "https://open.spotify.com/track/3OHfY..."  # by share URL
 canvasgrab --gif                            # also create a GIF
 canvasgrab --open                           # open file after download
+canvasgrab --verbose                        # debug API responses
 ```
 
-Files land in `~/Downloads/Canvas/` (macOS) or `%USERPROFILE%\Downloads\Canvas\` (Windows).
+Files land in `~/canvasgrab/`.
 
 ## Getting your sp_dc cookie
 
-canvasgrab needs your Spotify `sp_dc` cookie to authenticate. On macOS it auto-detects this from your browsers. On Windows, provide it manually:
+canvasgrab needs your Spotify `sp_dc` cookie. On macOS it auto-detects from Chrome, Brave, Edge, Firefox, Safari, Discord, or Cursor. On Windows, provide it manually:
 
 1. Go to [open.spotify.com](https://open.spotify.com) and log in
 2. Open **DevTools** (F12) → **Application** → **Cookies** → `open.spotify.com`
 3. Copy the value of the `sp_dc` cookie
-4. Run with `--sp-dc`:
-
-**Windows (cmd):**
-```cmd
-set SP_DC=<your_cookie>
-python canvasgrab.py
-```
 
 **Windows (PowerShell):**
 ```powershell
 $env:SP_DC = "<your_cookie>"
-python canvasgrab.py
+python canvasgrab.py "spotify:track:3OHfY25tqY28d16oZczHc8"
+```
+
+**Windows (cmd — persistent):**
+```cmd
+setx SP_DC "<your_cookie>"
 ```
 
 **macOS / Linux:**
@@ -65,14 +62,9 @@ export SP_DC="<your_cookie>"
 canvasgrab
 ```
 
-Or pass it inline:
+Or pass it inline on any platform:
 ```bash
-canvasgrab --sp-dc "<your_cookie>"
-```
-
-To make it permanent on Windows, use `setx`:
-```cmd
-setx SP_DC "<your_cookie>"
+canvasgrab --sp-dc "<your_cookie>" "spotify:track:3OHfY25tqY28d16oZczHc8"
 ```
 
 ## How it works

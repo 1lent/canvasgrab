@@ -96,7 +96,6 @@ def main() -> None:
         artist, title, track_id = get_current_track()
 
     track_uri = f"spotify:track:{track_id}"
-    print(f"\n  {artist} — {title}")
 
     sp_dc: Optional[str] = None
     from_manual = False
@@ -111,14 +110,19 @@ def main() -> None:
         sp_dc = auto_get_sp_dc()
 
     canvas_url: Optional[str] = None
+    track_printed = False
 
     if sp_dc:
         print("  Authenticating ...")
         token = get_spotify_token(sp_dc)
         if token:
+            print(f"\n  {artist} — {title}")
+            track_printed = True
             print("  Looking up Canvas ...")
             try:
-                canvas_url = get_canvas_url(track_id, token, verbose=args.verbose)
+                canvas_url, canvas_artist = get_canvas_url(track_id, token, verbose=args.verbose)
+                if canvas_artist and artist == "Unknown":
+                    artist = canvas_artist
             except NoCanvasError:
                 canvas_url = None
             except CanvasError as e:
@@ -143,6 +147,9 @@ def main() -> None:
                 )
             print("  Auth failed, trying cache ...")
 
+    if not track_printed:
+        print(f"\n  {artist} — {title}")
+
     if not canvas_url:
         print("  Searching local cache ...")
         canvas_url = get_cached_canvas_url(track_uri)
@@ -166,6 +173,10 @@ def main() -> None:
             die("No canvas available for this track.")
 
     safe_name = f"{artist} - {title}".replace("/", ":")
+    if title == "Unknown" and artist != "Unknown":
+        safe_name = f"{artist} - {track_id}"
+    elif artist == "Unknown" and title == "Unknown":
+        safe_name = track_id
     mp4_path = OUTPUT_DIR / f"{safe_name}.mp4"
     print("  Downloading ...")
     try:

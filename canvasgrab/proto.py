@@ -79,39 +79,65 @@ class _ProtoReader:
             self._pos += 8 if wire_type == 1 else 4
 
 
-def _parse_canvaz(data: bytes) -> Tuple[Optional[str], Optional[int]]:
+def _parse_canvaz(data: bytes) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     reader = _ProtoReader(data)
     url = None
     canvas_type = None
+    artist_name = None
     while not reader.done():
         tag = reader.next_tag()
         if tag is None:
             break
         field_number, wire_type = tag
         if field_number == 2 and wire_type == _WIRE_LEN:
-            url = reader.read_bytes().decode()
-            break
+            if url is None:
+                url = reader.read_bytes().decode()
+            else:
+                reader.skip(wire_type)
         elif field_number == 4 and wire_type == _WIRE_VARINT:
             canvas_type = reader.read_varint()
+        elif field_number == 6 and wire_type == _WIRE_LEN:
+            artist_bytes = reader.read_bytes()
+            artist_name = _parse_artist_name(artist_bytes)
+        elif field_number == 5 and wire_type == _WIRE_LEN:
+            reader.skip(wire_type)
         else:
             reader.skip(wire_type)
-    return url, canvas_type
+    return url, canvas_type, artist_name
 
 
-def decode_canvas_url(data: bytes) -> Optional[str]:
+def _parse_artist_name(data: bytes) -> Optional[str]:
     reader = _ProtoReader(data)
-    best = (None, -1)
+    while not reader.done():
+        tag = reader.next_tag()
+        if tag is None:
+            break
+        field_number, wire_type = tag
+        if field_number == 2 and wire_type == _WIRE_LEN:
+            return reader.read_bytes().decode()
+        else:
+            reader.skip(wire_type)
+    return None
+
+
+def decode_canvas_url(data: bytes) -> Tuple[Optional[str], Optional[str]]:
+    reader = _ProtoReader(data)
+    best_url = None
+    best_artist = None
+    best_prio = -1
     while not reader.done():
         tag = reader.next_tag()
         if tag is None:
             break
         field_number, wire_type = tag
         if field_number == 1 and wire_type == _WIRE_LEN:
-            url, canvas_type = _parse_canvaz(reader.read_bytes())
+            url, canvas_type, artist_name = _parse_canvaz(reader.read_bytes())
             if url:
                 priority = 2 if canvas_type == 2 else (0 if canvas_type is not None else 1)
-                if priority > best[1]:
-                    best = (url, priority)
+                if priority > best_prio:
+                    best_url = url
+                    best_artist = artist_name
+                    best_prio = priority
         else:
             reader.skip(wire_type)
-    return best[0]
+    return best_url, best_artist

@@ -17,8 +17,12 @@ def die(msg: str, code: int = 1) -> None:
 
 
 def _which(cmd: str) -> Optional[str]:
-    result = subprocess.run(["which", cmd], capture_output=True, text=True)
-    return result.stdout.strip() or None
+    try:
+        prog = "where" if platform.system() == "Windows" else "which"
+        result = subprocess.run([prog, cmd], capture_output=True, text=True)
+        return result.stdout.strip().split("\n")[0] if result.stdout.strip() else None
+    except FileNotFoundError:
+        return None
 
 
 def open_file(path: Path) -> None:

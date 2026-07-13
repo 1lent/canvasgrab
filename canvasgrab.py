@@ -45,9 +45,18 @@ def parse_track_id(raw: str) -> str:
 
 
 def _install(argv0: str) -> None:
-    target = Path("/usr/local/bin/canvasgrab")
     source = Path(argv0).resolve()
     source.chmod(source.stat().st_mode | 0o111)
+
+    if platform.system() == "Windows":
+        target_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Programs" / "canvasgrab"
+        target = target_dir / "canvasgrab.bat"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f'@echo off\npython "{source}" %*\n')
+        print(f"Installed. Add {target_dir} to your PATH, then run `canvasgrab` from anywhere.")
+        return
+
+    target = Path("/usr/local/bin/canvasgrab")
     if not target.parent.exists():
         try:
             target.parent.mkdir(parents=True, exist_ok=True)

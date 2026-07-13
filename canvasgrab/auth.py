@@ -354,7 +354,11 @@ def get_cached_canvas_url(track_uri: str) -> Optional[str]:
 
 def get_current_track() -> Tuple[str, str, str]:
     if platform.system() != "Darwin":
-        die("Auto-detection only works on macOS.")
+        die(
+            "No track provided. Auto-detection only works on macOS with Spotify desktop app.\n"
+            "  Provide a track URI/URL as argument:\n"
+            '  canvasgrab "spotify:track:3OHfY25tqY28d16oZczHc8"'
+        )
     script = (
         'tell application "Spotify" to '
         "get {artist of current track, name of current track, id of current track}"

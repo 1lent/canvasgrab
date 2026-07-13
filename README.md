@@ -31,8 +31,13 @@ Files land in `~/Downloads/Canvas/`.
 ## How it works
 
 canvasgrab auto-detects your Spotify `sp_dc` cookie from Chrome, Brave, Edge, Firefox, Safari, Discord, or Cursor. On macOS it decrypts Chromium cookies via the Keychain. If no browser cookies exist, it falls back to the Spotify desktop app's LevelDB cache.
+> if errors on windows you do not use 'export' to export the cookie you use setx..
+
 
 No manual setup required — just install and run.
+
+
+
 
 ## Acknowledgements
 

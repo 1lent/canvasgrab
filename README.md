@@ -2,7 +2,7 @@
 
 Download Spotify Canvas videos (the looping clips behind songs) as MP4 or GIF.
 
-<img width="400" height="711" alt="PARTYNEXTDOOR - DIE TRYING" src="https://github.com/user-attachments/assets/3ef2dc8b-60f2-4053-b9bc-c693a2e8096e" /> <img width="400" height="711" alt="PARTYNEXTDOOR - DIE TRYING" src="https://github.com/user-attachments/assets/fe518ce6-c53b-4eed-9d72-8169b779ea7d" />
+<img width="400" height="711" alt="PARTYNEXTDOOR - DIE TRYING" src="https://github.com/user-attachments/assets/3ef2dc8b-60f2-4053-b9bc-c693a2e8096e" /> <img width="400" height="868" alt="Lil Tecca - When You Down (with Polo G feat  Lil Durk)" src="https://github.com/user-attachments/assets/1ab6de9b-5ef4-46a6-bbc4-43227f2c6154" />
 
 
 
